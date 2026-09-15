@@ -567,9 +567,10 @@ cookie-cats-ab-testing/
 │   ├── experiment_memo.md            # One-page stakeholder memo
 │   └── figures/                      # Generated charts
 ├── powerbi/
+│   ├── cookie-cats-ab-testing.pbix   # The dashboard — downloadable
 │   ├── data/                         # 9 import-ready tables for BI
 │   ├── measures.dax                  # DAX measures incl. a live z-test
-│   └── CLAUDE_PROMPT.md              # Prompt to build the dashboard
+│   └── CLAUDE_PROMPT.md              # Prompt used to build the dashboard
 ├── README.md
 ├── requirements.txt
 └── .gitignore
@@ -577,9 +578,13 @@ cookie-cats-ab-testing/
 
 ### Power BI dashboard
 
-[`powerbi/`](powerbi/) contains everything needed to build an interactive dashboard on this
-analysis: nine modelled tables, a DAX measure set (including a two-proportion z-test written
-in DAX, so significance recomputes live under any slicer), and a build prompt.
+An interactive dashboard built on this analysis:
+**[`powerbi/cookie-cats-ab-testing.pbix`](powerbi/cookie-cats-ab-testing.pbix)** — download and
+open in Power BI Desktop.
+
+[`powerbi/`](powerbi/) also contains everything it was built from: nine modelled tables, a DAX
+measure set (including a two-proportion z-test written in DAX, so significance recomputes live
+under any slicer), and the build prompt.
 
 The statistics stay in Python; Power BI handles presentation only. The folder's
 [README](powerbi/README.md) carries the guardrails the dashboard must respect — chiefly that

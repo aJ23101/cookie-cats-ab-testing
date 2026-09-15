@@ -19,8 +19,9 @@ cannot be authored programmatically — there is no writer library for it. So th
 the **contents** of a dashboard rather than a fake file: the modelled data, the measures, and
 a build spec.
 
-When you build it, save it here as `cookie_cats_dashboard.pbix` and commit it — this is a
-portfolio repo, and being able to download and open the dashboard is the point.
+The built dashboard lives here as **`cookie-cats-ab-testing.pbix`** and is committed
+deliberately — this is a portfolio repo, and being able to download and open the dashboard is
+the point.
 
 Worth knowing: a `.pbix` is a binary blob git cannot diff, so every save adds its full size to
 history again. If that becomes annoying, save as **File → Save as → Power BI project

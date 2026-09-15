@@ -94,7 +94,7 @@ thing so I can work through it offline. Ask me about anything ambiguous before w
 
 ## After Claude gives you the guide
 
-Work through it in Power BI Desktop, then save as `powerbi/cookie_cats_dashboard.pbix`.
+Work through it in Power BI Desktop, then save as `powerbi/cookie-cats-ab-testing.pbix`.
 
 If you want the file to be diff-able in git, use **File → Save as → Power BI project (.pbip)**
 instead — that saves the report as folders of JSON/TMDL text rather than one binary blob, so
