@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Data
+# The Cookie Cats dataset is small and committed so the analysis is reproducible.
+# Uncomment the next line if the dataset should be fetched rather than tracked.
+# data/*.csv
