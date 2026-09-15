@@ -566,10 +566,24 @@ cookie-cats-ab-testing/
 ├── reports/
 │   ├── experiment_memo.md            # One-page stakeholder memo
 │   └── figures/                      # Generated charts
+├── powerbi/
+│   ├── data/                         # 9 import-ready tables for BI
+│   ├── measures.dax                  # DAX measures incl. a live z-test
+│   └── CLAUDE_PROMPT.md              # Prompt to build the dashboard
 ├── README.md
 ├── requirements.txt
 └── .gitignore
 ```
+
+### Power BI dashboard
+
+[`powerbi/`](powerbi/) contains everything needed to build an interactive dashboard on this
+analysis: nine modelled tables, a DAX measure set (including a two-proportion z-test written
+in DAX, so significance recomputes live under any slicer), and a build prompt.
+
+The statistics stay in Python; Power BI handles presentation only. The folder's
+[README](powerbi/README.md) carries the guardrails the dashboard must respect — chiefly that
+1-day retention is underpowered rather than null, and that segment results are exploratory.
 
 ### Reusable module
 

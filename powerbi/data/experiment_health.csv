@@ -1,0 +1,9 @@
+check,value,status,status_rank,detail
+Rows = unique players,"90,189 = 90,189",Pass,1,Grain is one row per randomized player
+Missing values,0,Pass,1,No imputation required
+Duplicate player IDs,0,Pass,1,No double counting
+Players in both arms,0,Pass,1,No cross-arm leakage
+Sample ratio (SRM),p = 0.0086,Not flagged,2,Does NOT cross the pre-specified p<0.001 threshold; documented as a health concern
+Extreme outlier,"49,854 rounds",Action taken,2,"One control-arm player, 17x the next highest; engagement uses robust methods"
+Pre-treatment covariates,None,Constraint,2,Blocks CUPED and covariate balance testing
+Falsification <30 rounds,p = 0.0490,Borderline,3,Does not provide clean evidence of a zero effect; unresolved

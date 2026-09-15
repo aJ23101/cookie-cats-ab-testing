@@ -1,0 +1,2 @@
+recommendation,ship_gate_40,primary_metric,primary_effect_pp,primary_relative_pct,primary_p_value,primary_ci_low_pp,primary_ci_high_pp,players_analysed,impact_per_1m,confidence,open_risk,next_experiment
+KEEP GATE 30,No,7-day retention,-0.8201298315205913,-4.311903489646016,0.001554249975614329,-1.3281552418885545,-0.3121044211526281,90189,-8201.298315205913,"High on primary metric (89% power, bootstrap-confirmed)",Retention is a proxy; no revenue data. D1 underpowered (43%). One falsification test borderline (p=0.049).,"gate_20 vs gate_30, with revenue instrumented"

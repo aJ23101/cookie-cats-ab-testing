@@ -22,3 +22,17 @@ Thumbs.db
 # The Cookie Cats dataset is small and committed so the analysis is reproducible.
 # Uncomment the next line if the dataset should be fetched rather than tracked.
 # data/*.csv
+
+# Power BI
+# The .pbix is deliberately NOT ignored: this is a portfolio repo, and being able
+# to download and open the dashboard is the point. It is a binary blob that git
+# cannot diff, so each save adds its full size to history - if that becomes a
+# problem, uncomment the line below and commit the .pbip project folders instead.
+# *.pbix
+
+# Power BI working files and caches (never useful to commit)
+*.pbix.tmp
+temp.pbix
+.pbi/
+**/.pbi/localSettings.json
+**/.pbi/cache.abf

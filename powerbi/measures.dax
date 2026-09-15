@@ -1,0 +1,266 @@
+// ===========================================================================
+// Cookie Cats A/B Test - DAX measures
+//
+// Paste these into Power BI Desktop one at a time:
+//   Home > New measure, then paste a single measure (name + expression).
+//
+// The measures in sections 1-5 are LIVE: they recompute against whatever
+// filters/slicers are applied, so the significance test updates when you
+// slice by engagement segment, round band, or gate exposure.
+//
+// Section 6 reads the pre-computed Python results instead - use those when
+// you want the canonical headline numbers that match the notebooks/README.
+// ===========================================================================
+
+
+// ---------------------------------------------------------------------------
+// 1. BASE COUNTS
+// ---------------------------------------------------------------------------
+
+Total Players = COUNTROWS ( player_facts )
+
+Control Players =
+CALCULATE ( [Total Players], player_facts[version] = "gate_30" )
+
+Treatment Players =
+CALCULATE ( [Total Players], player_facts[version] = "gate_40" )
+
+
+// ---------------------------------------------------------------------------
+// 2. 7-DAY RETENTION (PRIMARY METRIC)
+// ---------------------------------------------------------------------------
+
+D7 Retained = SUM ( player_facts[retention_7_flag] )
+
+D7 Retention Rate = DIVIDE ( [D7 Retained], [Total Players] )
+
+Control D7 Retained =
+CALCULATE ( [D7 Retained], player_facts[version] = "gate_30" )
+
+Treatment D7 Retained =
+CALCULATE ( [D7 Retained], player_facts[version] = "gate_40" )
+
+Control D7 Rate = DIVIDE ( [Control D7 Retained], [Control Players] )
+
+Treatment D7 Rate = DIVIDE ( [Treatment D7 Retained], [Treatment Players] )
+
+// Absolute difference, in percentage points. Negative = treatment is worse.
+D7 Abs Diff pp = ( [Treatment D7 Rate] - [Control D7 Rate] ) * 100
+
+D7 Relative Lift % =
+DIVIDE ( [Treatment D7 Rate] - [Control D7 Rate], [Control D7 Rate] ) * 100
+
+
+// ---------------------------------------------------------------------------
+// 3. LIVE SIGNIFICANCE TEST (two-proportion z-test, computed in DAX)
+//
+// Standard error of the difference between two independent proportions:
+//   SE = sqrt( p1(1-p1)/n1 + p2(1-p2)/n2 )
+//
+// NOTE ON A SMALL DISCREPANCY. This uses the UNPOOLED standard error, which is
+// what pairs correctly with the confidence interval below. The Python analysis
+// reports statsmodels' proportions_ztest, which POOLS the variance under the
+// null by default. On this data the two agree to five decimal places:
+//   unpooled  z = -3.16406,  p = 0.001556   <- what this dashboard shows
+//   pooled    z = -3.16436,  p = 0.001554   <- what the README reports
+// The gap is ~1.6e-06 and changes no conclusion. Use the section 6 headline
+// measures on the executive page if you want the cards to match the README
+// exactly.
+// ---------------------------------------------------------------------------
+
+D7 Standard Error =
+VAR PC = [Control D7 Rate]
+VAR PT = [Treatment D7 Rate]
+VAR NC = [Control Players]
+VAR NT = [Treatment Players]
+RETURN
+    IF (
+        NC > 0 && NT > 0,
+        SQRT ( DIVIDE ( PC * ( 1 - PC ), NC ) + DIVIDE ( PT * ( 1 - PT ), NT ) )
+    )
+
+D7 Z Statistic =
+DIVIDE ( [Treatment D7 Rate] - [Control D7 Rate], [D7 Standard Error] )
+
+// Two-sided p-value from the standard normal distribution.
+D7 P Value =
+VAR Z = ABS ( [D7 Z Statistic] )
+RETURN IF ( NOT ISBLANK ( Z ), 2 * ( 1 - NORM.S.DIST ( Z, TRUE ) ) )
+
+// 1.959964 is the two-sided 95% normal critical value.
+D7 CI Lower pp =
+( ( [Treatment D7 Rate] - [Control D7 Rate] ) - 1.959964 * [D7 Standard Error] ) * 100
+
+D7 CI Upper pp =
+( ( [Treatment D7 Rate] - [Control D7 Rate] ) + 1.959964 * [D7 Standard Error] ) * 100
+
+D7 Is Significant =
+IF ( [D7 P Value] < 0.05, "Significant", "Not detected" )
+
+// Error-bar helper: half-width of the CI, for the Y-axis error bars on the
+// retention column chart.
+D7 CI Half Width pp = 1.959964 * [D7 Standard Error] * 100
+
+
+// ---------------------------------------------------------------------------
+// 4. 1-DAY RETENTION (SECONDARY)
+// ---------------------------------------------------------------------------
+
+D1 Retained = SUM ( player_facts[retention_1_flag] )
+
+D1 Retention Rate = DIVIDE ( [D1 Retained], [Total Players] )
+
+Control D1 Rate =
+DIVIDE (
+    CALCULATE ( [D1 Retained], player_facts[version] = "gate_30" ),
+    [Control Players]
+)
+
+Treatment D1 Rate =
+DIVIDE (
+    CALCULATE ( [D1 Retained], player_facts[version] = "gate_40" ),
+    [Treatment Players]
+)
+
+D1 Abs Diff pp = ( [Treatment D1 Rate] - [Control D1 Rate] ) * 100
+
+D1 Relative Lift % =
+DIVIDE ( [Treatment D1 Rate] - [Control D1 Rate], [Control D1 Rate] ) * 100
+
+D1 Standard Error =
+VAR PC = [Control D1 Rate]
+VAR PT = [Treatment D1 Rate]
+VAR NC = [Control Players]
+VAR NT = [Treatment Players]
+RETURN
+    IF (
+        NC > 0 && NT > 0,
+        SQRT ( DIVIDE ( PC * ( 1 - PC ), NC ) + DIVIDE ( PT * ( 1 - PT ), NT ) )
+    )
+
+D1 P Value =
+VAR Z = ABS ( DIVIDE ( [Treatment D1 Rate] - [Control D1 Rate], [D1 Standard Error] ) )
+RETURN IF ( NOT ISBLANK ( Z ), 2 * ( 1 - NORM.S.DIST ( Z, TRUE ) ) )
+
+
+// ---------------------------------------------------------------------------
+// 5. ENGAGEMENT (outlier-robust - see the note below)
+//
+// One player logged 49,854 rounds, ~17x the next highest, and sits in the
+// control arm. The raw mean is therefore misleading; prefer the median or the
+// excl-outlier mean when comparing arms.
+// ---------------------------------------------------------------------------
+
+Avg Game Rounds = AVERAGE ( player_facts[sum_gamerounds] )
+
+Median Game Rounds = MEDIAN ( player_facts[sum_gamerounds] )
+
+Avg Game Rounds Excl Outlier =
+CALCULATE ( AVERAGE ( player_facts[sum_gamerounds] ), player_facts[is_outlier] = 0 )
+
+Rounds Diff Excl Outlier =
+CALCULATE ( [Avg Game Rounds Excl Outlier], player_facts[version] = "gate_40" )
+    - CALCULATE ( [Avg Game Rounds Excl Outlier], player_facts[version] = "gate_30" )
+
+// Share of players who never played a single round.
+Zero Round Players % =
+DIVIDE (
+    CALCULATE ( [Total Players], player_facts[played_at_all] = 0 ),
+    [Total Players]
+) * 100
+
+// Share of players who could not have reached EITHER gate, and for whom the
+// treatment is therefore definitionally inert.
+Unexposed Players % =
+DIVIDE (
+    CALCULATE ( [Total Players], player_facts[gate_exposure] = "Could not reach either gate" ),
+    [Total Players]
+) * 100
+
+
+// ---------------------------------------------------------------------------
+// 6. HEADLINE FIGURES (from the pre-computed Python results)
+//
+// Use these on the executive page so the cards always show the canonical
+// numbers, unaffected by slicers.
+// ---------------------------------------------------------------------------
+
+Headline Effect pp =
+CALCULATE (
+    SELECTEDVALUE ( experiment_results[abs_diff_pp] ),
+    experiment_results[metric] = "7-day retention"
+)
+
+Headline P Value =
+CALCULATE (
+    SELECTEDVALUE ( experiment_results[p_value] ),
+    experiment_results[metric] = "7-day retention"
+)
+
+Headline CI Text =
+VAR Lo =
+    CALCULATE (
+        SELECTEDVALUE ( experiment_results[diff_ci_low_pp] ),
+        experiment_results[metric] = "7-day retention"
+    )
+VAR Hi =
+    CALCULATE (
+        SELECTEDVALUE ( experiment_results[diff_ci_high_pp] ),
+        experiment_results[metric] = "7-day retention"
+    )
+RETURN FORMAT ( Lo, "0.00" ) & " to " & FORMAT ( Hi, "0.00" ) & " pp"
+
+// Business impact, scaled to a hypothetical cohort.
+// ASSUMPTION: measured retention rates hold for future new players.
+Impact per 1M Players =
+CALCULATE (
+    SELECTEDVALUE ( experiment_results[impact_per_1m_players] ),
+    experiment_results[metric] = "7-day retention"
+)
+
+Impact Range Text =
+VAR Lo =
+    CALCULATE (
+        SELECTEDVALUE ( experiment_results[impact_low_per_1m] ),
+        experiment_results[metric] = "7-day retention"
+    )
+VAR Hi =
+    CALCULATE (
+        SELECTEDVALUE ( experiment_results[impact_high_per_1m] ),
+        experiment_results[metric] = "7-day retention"
+    )
+RETURN FORMAT ( ABS ( Hi ), "#,0" ) & " to " & FORMAT ( ABS ( Lo ), "#,0" ) & " fewer players"
+
+Recommendation = SELECTEDVALUE ( decision_summary[recommendation] )
+
+
+// ---------------------------------------------------------------------------
+// 7. CARD / FORMATTING HELPERS
+// ---------------------------------------------------------------------------
+
+// Signed, human-readable effect for a KPI card.
+D7 Effect Label =
+VAR E = [D7 Abs Diff pp]
+RETURN IF ( E < 0, FORMAT ( E, "0.00" ), "+" & FORMAT ( E, "0.00" ) ) & " pp"
+
+// Drive conditional formatting (Format > Callout value > fx > Field value).
+// Red when treatment is significantly worse, grey when nothing is detected.
+D7 Effect Colour =
+SWITCH (
+    TRUE (),
+    [D7 P Value] >= 0.05, "#898781",
+    [D7 Abs Diff pp] < 0, "#d03b3b",
+    "#0ca30c"
+)
+
+// Guards against over-reading an underpowered non-result.
+D7 Significance Note =
+VAR P = [D7 P Value]
+RETURN
+    SWITCH (
+        TRUE (),
+        P < 0.01, "Strong evidence of a difference",
+        P < 0.05, "Evidence of a difference",
+        P < 0.10, "Not detected - inconclusive, not evidence of no effect",
+        "No difference detected at this sample size"
+    )
